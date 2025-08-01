@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Square Tile</title>
+</head>
+<body>
+
+        <canvas id="box" width="600" height="600"></canvas>
+
+    <script>
+var canvas = document.getElementById('box');
+var ctx = canvas.getContext('2d');
+
+const One = BigInt(1)
+
+function draw_tile(x,y,color = "blue"){
+    ctx.fillStyle = color;
+    var width = 20;
+    var height = 20;
+    ctx.fillRect(x, y, width, height);
+    const vertices = [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: .7, y: .3 },
+    { x: .3, y: .3 },
+    ]
+    ctx.beginPath();
+    for (let i = 0; i < vertices.length; i++) {
+        ctx.lineTo(vertices[i].x*width + x, vertices[i].y*height + y);
+    }
+    ctx.closePath(); 
+    ctx.fillStyle = "light" + color;
+    ctx.fill(); 
+    ctx.beginPath();
+    for (let i = 0; i < vertices.length; i++) {
+        ctx.lineTo(vertices[i].x*width + x, height - vertices[i].y*height + y);
+    }
+    ctx.closePath(); 
+    ctx.fillStyle = "dark" + color;
+    ctx.fill(); 
+}
+
+function draw_board(board){
+    width = 160
+    height = 160
+    spacing = 10
+    ctx.fillStyle = 'grey';
+    ctx.fillRect(spacing, spacing, width, height);
+    var number = 8;
+    var linewidth = 1;
+    ctx.fillStyle = 'black';
+    for (var i = 0.0; i < number+1; i +=1.0){
+        if (i == 4 || i == 8) {linewidth = 2}
+        else { linewidth = 1}
+        ctx.fillRect(spacing + width*i/number, spacing, linewidth, height);
+        ctx.fillRect(spacing,spacing + height*i/number,width, linewidth);
+    }
+    for (var j = 0; j < number; j +=1)
+    for (var i = 0; i < number; i +=1){
+        var num = i+j*8;
+
+        var hash =One << BigInt(num);
+        
+        full = (board & hash) > 0
+
+        if (full) {
+            draw_tile(spacing + width*i/number,spacing + height*j/number)
+        }
+    }
+}
+
+function animate_win(board, color = 'white'){
+    width = 160
+    height = 160
+    spacing = 10
+
+    var number = 8.0;
+    for (var j = 0; j < number; j +=1)
+    for (var i = 0; i < number; i +=1){
+        var num = i  + j * 8;
+        
+        var hash =One << BigInt(num);
+        full = (board & hash) > 0
+
+        if (full) {
+            draw_tile(spacing + width*i/number,spacing + height*j/number,color)
+        }
+    }
+}
+
+function draw_shape(x,y,shape,color = 'red'){
+    tiles = shape.tiles
+    for (var i = 0; i < tiles.length; i +=1)
+    {
+        //console.log(x+tiles[i][x]*20,y+tiles[i][y]*20,color)
+        draw_tile(x+tiles[i].x*20,y+tiles[i].y*20,color)
+    }
+}
+
+function coords_from_event(event){
+    return {x: Math.floor((event.clientX - 20) / 20), y: Math.floor((event.clientY - 20) / 20)}
+}
+
+function check_hash(hash,board){
+    hashand = hash & board
+    return (hashand == hash)
+}
+
+function check_wins(board)
+{
+    notboard = Board()
+
+    for (var i = 0; i < 8; i +=1)
+    {
+        hash = BigInt(512) << BigInt(i*8)
+        if (check_hash(hash,board)){
+            notboard = hash | notboard
+        }
+
+        hash = BigInt(1211291623566908292464896n) << BigInt(i)
+        if (check_hash(hash,board)){
+            notboard = hash | notboard
+        }
+    }
+    
+    hash = BigInt(252645135n)
+    if (check_hash(hash,board)){
+        notboard = hash | notboard
+    }
+
+    hash = BigInt(4042322160n)
+    if (check_hash(hash,board)){
+        notboard = hash | notboard
+    }
+    
+    hash = BigInt(1085102592318504960n)
+    if (check_hash(hash,board)){
+        notboard = hash | notboard
+    }
+
+    hash = BigInt(17361641477096079360n)
+    if (check_hash(hash,board)){
+        notboard = hash | notboard
+    }
+    return notboard
+
+}
+
+function add_shape_to_board(shape,coords,board){
+    tiles = shape.tiles
+    for (var i = 0; i < tiles.length; i +=1)
+    {
+        var X = coords.x + tiles[i].x;
+        var Y = coords.y + tiles[i].y;
+        var num = Math.floor(X) + Math.floor(Y) * 8;
+
+        var hash = One << BigInt(num);
+        board += hash
+    }
+    return board
+}
+
+// class Board {
+//     constructor(){
+//         this = BigInt(0);
+//     //     for (var i = 0; i < 16; i +=1)
+//     // {
+       
+//     //     this += One << BigInt(i+Math.floor(i/4)*4+32)
+//     // }
+//     console.log(this)
+// }
+// }
+
+class Shape {
+    constructor(){
+        this.tiles = [
+    { x: 0, y: 0 },{ x: 1, y: 0 },
+    ]
+    }
+}
+function Board(){
+    return BigInt(0);
+}
+//SHAPES ______________________________
+
+var line2 = [ { x: 0, y: 0 },{ x: 1, y: 0 },]
+var line3 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 2, y: 0 },]
+var line4 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 2, y: 0 },{ x: 3, y: 0 },]
+var line5 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 2, y: 0 },{ x: 3, y: 0 },{ x: 4, y: 0 },]
+var line6 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 2, y: 0 },{ x: 3, y: 0 },{ x: 4, y: 0 },{ x: 5, y: 0 }]
+var L2 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 0, y: 1 },]
+var L3 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 2, y: 0 },{ x: 0, y: 1 },]
+var L4 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 2, y: 0 },{ x: 0, y: 1 },{ x: 0, y: 2 },]
+var T1 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 0, y: 1 },{ x: -1, y: 0 },]
+var T2 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 0, y: 1 },{ x: 0, y: 2 },{ x: -1, y: 0 },]
+
+shapes1 = [line2, line3, line4, line5, line6, L2, L3, L4, T1, T2]
+shapes = []
+for (var rot = 0; rot < 3; rot +=1)
+for (var i = 0; i <shapes1.length; i+=1){
+    //shape = shapes1[i]
+    shape = []
+    for (var point = 0; point < shapes1[i].length; point+=1){
+        var X = shapes1[i][point].x
+        var Y = shapes1[i][point].y
+        shapes1[i][point].x = Y
+        shapes1[i][point].y = -X
+        shape.push({x:Y,y:-X})
+        // console.log(point)
+    }
+    shapes.push(shape)
+
+}
+// SHAPES END __________________________
+
+
+TheBoard = Board()
+TheShape = new Shape()
+canvas.addEventListener('mousemove', function(event) {
+    // while (element.matches(':hover')) {
+    ctx.clearRect(0,0,600,600)
+    draw_board(TheBoard)
+    if (event.clientX<200 && event.clientY<200)
+    {
+        var coords = coords_from_event(event)
+        draw_shape(coords.x*20+10,coords.y*20+10,TheShape,"green")
+    }
+    else {
+        draw_shape(event.clientX,event.clientY,TheShape,"green")
+    }
+    theoretical_board = add_shape_to_board(TheShape,coords_from_event(event),TheBoard)
+    var notboard = check_wins(theoretical_board)
+
+    animate_win(notboard, "red")
+
+});
+
+canvas.addEventListener('mousedown', function(event) {
+    tiles = TheShape.tiles
+    var coords = coords_from_event(event)
+    console.log(coords)
+    var anyfull = false
+    for (var i = 0; i < tiles.length; i +=1)
+    {
+        var X = coords.x + tiles[i].x;
+        var Y = coords.y + tiles[i].y;
+        if (X>=8 | Y >= 8){
+            anyfull = true;
+        }
+        var num = Math.floor(X)+Math.floor(Y)*8;
+
+        var hash =One << BigInt(num);
+        full = (TheBoard & hash) > 0
+        anyfull = full || anyfull
+    }
+    if (anyfull){
+        console.log("tile full cancel")
+    }
+    else
+    {
+        for (var i = 0; i < tiles.length; i +=1)
+        {
+            var X = coords.x + tiles[i].x;
+            var Y = coords.y + tiles[i].y;
+            var num = Math.floor(X) + Math.floor(Y) * 8;
+
+            var hash = One << BigInt(num);
+            TheBoard += hash
+        }
+    }
+    draw_board(TheBoard)
+    var notboard = check_wins(TheBoard)
+    TheBoard = TheBoard ^ notboard
+    
+    animate_win(notboard,'white')
+
+    var randomIndex = Math.floor(Math.random() * shapes.length);
+    
+    TheShape.tiles = shapes[randomIndex]
+});
+
+// console.log(BigInt(1229782938247303441)*BigInt(1229782938247303441))
+draw_board(TheBoard)
+    </script>
+</body>
+</html>

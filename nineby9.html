@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Square Tile</title>
+</head>
+<body>
+
+        <canvas id="box" width="600" height="600"></canvas>
+        
+    <script>
+var canvas = document.getElementById('box');
+var ctx = canvas.getContext('2d');
+const rect = canvas.getBoundingClientRect();
+
+var RECTLEFT = rect.left; // X-coordinate of the upper-left corner relative to the viewport
+var RECTTOP = rect.top; 
+// IMPORTANT NUMBERS? HASH?
+
+const One = BigInt(1)
+const firstrow = BigInt(511)
+const lastrow = firstrow << BigInt(9*8)
+const firstcolumn = BigInt(4731607904558235517441n)
+const lastcolumn = firstcolumn << BigInt(8)
+
+var Score = 0
+function draw_tile(x,y,color = "blue"){
+    ctx.fillStyle = color;
+    var width = 40;
+    var height = 40;
+    ctx.fillRect(x, y, width, height);
+    const vertices = [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: .7, y: .3 },
+    { x: .3, y: .3 },
+    ]
+    ctx.beginPath();
+    for (let i = 0; i < vertices.length; i++) {
+        ctx.lineTo(vertices[i].x*width + x, vertices[i].y*height + y);
+    }
+    ctx.closePath(); 
+    ctx.fillStyle = "light" + color;
+    ctx.fill(); 
+    ctx.beginPath();
+    for (let i = 0; i < vertices.length; i++) {
+        ctx.lineTo(vertices[i].x*width + x, height - vertices[i].y*height + y);
+    }
+    ctx.closePath(); 
+    ctx.fillStyle = "dark" + color;
+    ctx.fill(); 
+}
+
+function draw_board(board,color = 'blue'){
+    ctx.clearRect(0,0,600,600)
+    width = 360
+    height = 360
+    spacing = 10
+    ctx.fillStyle = 'grey';
+    ctx.fillRect(spacing, spacing, width, height);
+    var number = 9;
+    var linewidth = 1;
+    ctx.fillStyle = 'black';
+    for (var i = 0.0; i < number+1; i +=1.0){
+        if (i == 3 | i == 9 | i == 6) {linewidth = 4}
+        else { linewidth = 1}
+        ctx.fillRect(spacing + width*i/number, spacing, linewidth, height);
+        ctx.fillRect(spacing,spacing + height*i/number,width, linewidth);
+    }
+    for (var j = 0; j < number; j +=1)
+    for (var i = 0; i < number; i +=1){
+        var num = i+j*9;
+
+        var hash =One << BigInt(num);
+        
+        full = (board & hash) > 0
+
+        if (full) {
+            draw_tile(spacing + width*i/number,spacing + height*j/number,color)
+        }
+    }
+
+    ctx.font = "48px serif";
+    ctx.fillText("Score " + Score, 200, 420);
+}
+
+function draw_board_tiles_only(board,color = 'blue'){
+    width = 360
+    height = 360
+    spacing = 10
+    var number = 9;
+    for (var j = 0; j < number; j +=1)
+    for (var i = 0; i < number; i +=1){
+        var num = i+j*9;
+
+        var hash =One << BigInt(num);
+        
+        full = (board & hash) > 0
+
+        if (full) {
+            draw_tile(spacing + width*i/number,spacing + height*j/number,color)
+        }
+    }
+
+    ctx.font = "48px serif";
+    ctx.fillText("Score " + Score, 200, 420);
+}
+
+
+function animate_win(board, color = 'white'){
+    width = 360
+    height = 360
+    spacing = 10
+
+    var number = 9.0;
+    for (var j = 0; j < number; j +=1)
+    for (var i = 0; i < number; i +=1){
+        var num = i  + j * 9;
+        
+        var hash =One << BigInt(num);
+        full = (board & hash) > 0
+
+        if (full) {
+            draw_tile(spacing + width*i/number,spacing + height*j/number,color)
+        }
+    }
+}
+
+function draw_shape(x,y,shape,color = 'red'){
+    tiles = shape.tiles
+    for (var i = 0; i < tiles.length; i +=1)
+    {
+        //console.log(x+tiles[i][x]*40,y+tiles[i][y]*40,color)
+        draw_tile(x+tiles[i].x*40,y+tiles[i].y*40,color)
+    }
+}
+
+function coords_from_event(event){
+    return {x: Math.floor((event.clientX - RECTLEFT) / 40), y: Math.floor((event.clientY - RECTTOP) / 40)}
+}
+
+function check_hash(hash,board){
+    hashand = hash & board
+    return (hashand == hash)
+}
+
+function generate_hashes()
+{
+    hashes = []
+    for (var i = 0; i < 9; i +=1)
+    {
+        var hash = BigInt(511) << BigInt(i*9)
+        hashes.push(hash)
+
+        hash = BigInt(4731607904558235517441n) << BigInt(i)
+        hashes.push(hash)
+    }
+
+    threebythree = BigInt(1838599n);
+    for (var i = 0; i < 3; i +=1)
+    for (var j = 0; j < 3; j +=1)
+    {
+        hash = threebythree << BigInt(i*3+j*27)
+        hashes.push(hash)
+    }
+
+    console.log(hashes)
+    return hashes
+}
+
+All_hashes = generate_hashes()
+
+function check_wins(board)
+{
+    notboard = Board()
+    for (var i = 0; i < All_hashes.length; i +=1)
+    {
+
+        hash = hashes[i]
+        if (check_hash(hash,board)){
+            notboard = hash | notboard
+        }
+    }
+    return notboard
+}
+
+function count_wins(board)
+{
+    notboard = Board()
+    score = 0
+    for (var i = 0; i < All_hashes.length; i +=1)
+    {
+
+        hash = hashes[i]
+        if (check_hash(hash,board)){
+            score+=1
+        }
+    }
+    return score
+}
+
+function add_shape_to_board(shape,coords,board){
+    tiles = shape.tiles
+    for (var i = 0; i < tiles.length; i +=1)
+    {
+        var X = coords.x + tiles[i].x;
+        var Y = coords.y + tiles[i].y;
+        if (X >= 9 | X < 0 | Y >= 9 | Y < 0){
+            return Board();
+        }
+        var num = Math.floor(X) + Math.floor(Y) * 9;
+
+        var hash = One << BigInt(num);
+        if ((TheBoard & hash) > 0){
+            return Board()
+        }
+        board += hash
+    }
+    return board
+}
+
+function score_board(board){
+    score = 0
+    for (var i = 0; i < 81; i += 1){
+        score += ((board & One) == One)
+        
+        board = board >> One
+    }
+    return score
+}
+
+function check_shape_spots(shape) {
+    tiles = shape.tiles
+    var board = Board()
+    for (var i = 0; i < tiles.length; i +=1)
+    {
+        var X = tiles[i].x+5;
+        var Y = tiles[i].y+5;
+        
+        var num = Math.floor(X) + Math.floor(Y) * 9;
+
+        var hash = One << BigInt(num);
+        
+        board += hash
+    }
+    // move down rows until bottom row contains tile
+    while ( (board & BigInt(511)) == BigInt(0))
+    {
+        board = board >> BigInt(9)
+    }
+    // move down columns
+    while ( (board & BigInt(4731607904558235517441n)) == BigInt(0))
+    {
+        board = board >> BigInt(1)
+    }
+    
+    var W = BigInt(0);
+    while ( (board & lastrow) == BigInt(0))
+    {
+        W+=One
+        board = board << BigInt(9)
+    }
+    board = board >> ( W*BigInt(9))
+
+    var Best_score = -1
+    var Best_board = false
+    var spotfound = false
+
+    while ( (board & lastcolumn) == BigInt(0))
+    {
+        if ((board & TheBoard) == BigInt(0))
+        {   
+            spotfound = true
+            var combined_board = board | TheBoard
+            var score = count_wins(combined_board)
+
+            if (score > Best_score){
+                Best_score = score
+                Best_board = board
+            }
+        }
+        while ( (board & lastrow) == BigInt(0))
+        {
+            
+            board = board << BigInt(9)
+            if ((board & TheBoard) == BigInt(0))
+        {   
+            spotfound = true
+            var combined_board = board | TheBoard
+            var score = count_wins(combined_board)
+            
+            if (score > Best_score){
+                Best_score = score
+                Best_board = board
+            }
+        }
+        }
+        board = board >> ( W*BigInt(9))
+
+        board = board << BigInt(1)
+        if ((board & TheBoard) == BigInt(0))
+        {   
+            spotfound = true
+            var combined_board = board | TheBoard
+            var score = count_wins(combined_board)
+            
+            if (score > Best_score){
+                Best_score = score
+                Best_board = board
+            }
+        }
+    }
+    if (spotfound){
+        draw_board_tiles_only(Best_board,'orange')
+        draw_board_tiles_only(TheBoard)
+    }
+    return spotfound;
+}
+function find_best_score(shape) {
+    tiles = shape.tiles
+    var board = Board()
+    for (var i = 0; i < tiles.length; i +=1)
+    {
+        var X = tiles[i].x+5;
+        var Y = tiles[i].y+5;
+        
+        var num = Math.floor(X) + Math.floor(Y) * 9;
+
+        var hash = One << BigInt(num);
+        
+        board += hash
+    }
+    // move down rows until bottom row contains tile
+    while ( (board & BigInt(511)) == BigInt(0))
+    {
+        board = board >> BigInt(9)
+    }
+    // move down columns
+    while ( (board & BigInt(4731607904558235517441n)) == BigInt(0))
+    {
+        board = board >> BigInt(1)
+    }
+    
+    var W = BigInt(0);
+    while ( (board & lastrow) == BigInt(0))
+    {
+        W+=One
+        board = board << BigInt(9)
+    }
+    board = board >> ( W*BigInt(9))
+
+    var Best_score = -1
+    var Best_board = false
+    var spotfound = false
+
+    while ( (board & lastcolumn) == BigInt(0))
+    {
+        if ((board & TheBoard) == BigInt(0))
+        {   
+            spotfound = true
+            var combined_board = board | TheBoard
+            var score = count_wins(combined_board)
+
+            if (score > Best_score){
+                Best_score = score
+                Best_board = board
+            }
+        }
+        while ( (board & lastrow) == BigInt(0))
+        {
+            
+            board = board << BigInt(9)
+            if ((board & TheBoard) == BigInt(0))
+        {   
+            spotfound = true
+            var combined_board = board | TheBoard
+            var score = count_wins(combined_board)
+            
+            if (score > Best_score){
+                Best_score = score
+                Best_board = board
+            }
+        }
+        }
+        board = board >> ( W*BigInt(9))
+
+        board = board << BigInt(1)
+        if ((board & TheBoard) == BigInt(0))
+        {   
+            spotfound = true
+            var combined_board = board | TheBoard
+            var score = count_wins(combined_board)
+            
+            if (score > Best_score){
+                Best_score = score
+                Best_board = board
+            }
+        }
+    }
+    
+    return Best_score;
+}
+class Shape {
+    constructor(){
+        this.tiles = [
+    { x: 0, y: 0 },{ x: 1, y: 0 },
+    ]
+    }
+}
+function Board(){
+    return BigInt(0);
+}
+//SHAPES ______________________________
+
+var line2 = [ { x: 0, y: 0 },{ x: 1, y: 0 },]
+var line3 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 2, y: 0 },]
+var line4 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 2, y: 0 },{ x: 3, y: 0 },]
+var line5 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 2, y: 0 },{ x: 3, y: 0 },{ x: 4, y: 0 },]
+var line6 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 2, y: 0 },{ x: 3, y: 0 },{ x: 4, y: 0 },{ x: 5, y: 0 }]
+var L2 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 0, y: 1 },]
+var L3 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 2, y: 0 },{ x: 0, y: 1 },]
+var L4 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 2, y: 0 },{ x: 0, y: 1 },{ x: 0, y: 2 },]
+var T1 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 0, y: 1 },{ x: -1, y: 0 },]
+var T2 = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 0, y: 1 },{ x: 0, y: 2 },{ x: -1, y: 0 },]
+var square = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 0, y: 1 },{ x: 1, y: 1 },]
+var rectangle = [ { x: 0, y: 0 },{ x: 1, y: 0 },{ x: 0, y: 1 },{ x: 1, y: 1 },{ x: 2, y: 0 },{ x: 2, y: 1 },]
+shapes1 = [line2, line3, line4, line5, line6, L2, L3, L4, T1, T2, square, rectangle]  
+shapes = []
+for (var rot = 0; rot < 3; rot +=1)
+for (var i = 0; i <shapes1.length; i+=1){
+    //shape = shapes1[i]
+    shape = []
+    for (var point = 0; point < shapes1[i].length; point+=1){
+        var X = shapes1[i][point].x
+        var Y = shapes1[i][point].y
+        shapes1[i][point].x = Y
+        shapes1[i][point].y = -X
+        shape.push({x:Y,y:-X})
+        // console.log(point)
+    }
+    shapes.push(shape)
+
+}
+// SHAPES END __________________________
+
+
+TheBoard = Board()
+TheShape = new Shape()
+canvas.addEventListener('mousemove', function(event) {
+    // while (element.matches(':hover')) {
+    ctx.clearRect(0,0,600,600)
+    RECTLEFT = rect.left;
+    RECTTOP = rect.top; 
+    draw_board(TheBoard)
+    if (event.clientX - RECTLEFT<400 && event.clientY - RECTTOP<400)
+    {
+        var coords = coords_from_event(event)
+        draw_shape(coords.x*40+10,coords.y*40+10,TheShape,"green")
+        theoretical_board = add_shape_to_board(TheShape,coords_from_event(event),TheBoard)
+        if (theoretical_board == Board()){
+            draw_shape(coords.x*40+10,coords.y*40+10,TheShape,"red")
+        }
+        var notboard = check_wins(theoretical_board)
+
+        animate_win(notboard, "yellow")
+    }
+    else {
+        draw_shape(event.clientX - RECTLEFT,event.clientY - RECTTOP,TheShape,"green")
+    }
+    
+
+});
+
+canvas.addEventListener('mousedown', function(event) {
+    RECTLEFT = rect.left;
+    RECTTOP = rect.top; 
+    tiles = TheShape.tiles
+    var coords = coords_from_event(event)
+    console.log(coords)
+    var anyfull = false
+    for (var i = 0; i < tiles.length; i +=1)
+    {
+        var X = coords.x + tiles[i].x;
+        var Y = coords.y + tiles[i].y;
+        if (X >= 9 | X < 0 | Y >= 9 | Y < 0){
+            anyfull = true;
+        }
+        var num = Math.floor(X)+Math.floor(Y)*9;
+
+        var hash =One << BigInt(num);
+        full = (TheBoard & hash) > 0
+        anyfull = full || anyfull
+    }
+    if (anyfull){
+        console.log("tile full cancel")
+    }
+    else
+    {
+        for (var i = 0; i < tiles.length; i +=1)
+        {
+            var X = coords.x + tiles[i].x;
+            var Y = coords.y + tiles[i].y;
+            var num = Math.floor(X) + Math.floor(Y) * 9;
+
+            var hash = One << BigInt(num);
+            TheBoard += hash
+            Score += 1
+        }
+    }
+    draw_board(TheBoard)
+    var notboard = check_wins(TheBoard)
+    TheBoard = TheBoard ^ notboard
+    
+    animate_win(notboard,'white')
+
+    var randomIndex = Math.floor(Math.random() * shapes.length);
+    
+    TheShape.tiles = shapes[randomIndex]
+
+    if (TurnNumber%3 == 0)
+{        Best_score = find_best_score(TheShape)
+
+        standard_score = 3
+        var i = 0
+        while (Best_score<standard_score)
+        {
+            randomIndex = Math.floor(Math.random() * shapes.length);
+            TheShape.tiles = shapes[randomIndex]
+            Best_score = find_best_score(TheShape)
+            i+=1
+            if (i>100){
+            standard_score-=1
+            i = 0
+            }
+            
+        }
+        ctx.fillText("Expected score "+standard_score, 200, 520);
+        check_shape_spots(TheShape)
+}
+    TurnNumber +=1
+});
+
+// console.log(BigInt(1229782938247303441)*BigInt(1229782938247303441))
+draw_board(TheBoard)
+Score = 0
+var TurnNumber = 0
+score_board(BigInt(2))
+score_board(BigInt(255))
+    </script>
+</body>
+</html>
