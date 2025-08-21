@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cube Tile</title>
+</head>
+<body>
+
+        <canvas id="box" width="600" height="800"></canvas>
+        
+    <script>
+        console.log('hell')
+var canvas = document.getElementById('box');
+var ctx = canvas.getContext('2d');
+const rect = canvas.getBoundingClientRect();
+
+var RECTLEFT = rect.left; // X-coordinate of the upper-left corner relative to the viewport
+var RECTTOP = rect.top; 
+console.log('hell')
+
+const width = 30;
+const height = 60;
+const depth = 40;
+const center = 300;
+const verticesfront = [
+{ x: 0, y:  0, z:0 },
+{ x: 0, y: 1, z:0 },
+{ x: 1, y: 1, z:0 },
+{ x: 1, y:  0, z:0 },
+]
+const verticesleft = [
+{ x: 0, y:  0, z:0 },
+{ x: 0, y: 1, z:0 },
+{ x: 0, y: 1, z:1 },
+{ x: 0, y:  0, z:1 },
+]
+const verticesright = [
+{ x: 0, y:  0, z:0 },
+{ x: 1, y:  0, z:0 },
+{ x: 1, y:  0, z:1 },
+{ x: 0, y:  0, z:1 },
+]
+
+function draw3polygon(vertices,color,x,y){
+    console.log(vertices.length)
+    ctx.beginPath();
+    for (let i = 0; i < vertices.length; i++) {
+        let p = vertices[i]
+        ctx.lineTo(p.x*width  - p.y*height + x,-p.x*width/2 - p.y*height/2  + y + p.z*depth);
+    }
+    ctx.closePath(); 
+    ctx.fillStyle = color;
+    ctx.fill(); 
+}
+
+function draw_tile(x,y,color = "blue"){
+    ctx.fillStyle = color;
+    
+    draw3polygon(verticesfront,"light" + color,x,y)
+    draw3polygon(verticesleft,"dark" + color,x,y)
+    draw3polygon(verticesright, color,x,y)
+}
+
+function draw_board(board,color = 'blue')
+{
+    ctx.clearRect(0,0,600,800)
+
+    //grey backround
+    for (var j = 0; j < 3; j +=1)
+    for (var i = 0; i < 3; i +=1)
+    {
+        draw3polygon(verticesfront,'grey',j*width - i*height + center,-j*width/2 - i*height/2 + depth*3.3+center)
+        draw3polygon(verticesleft,'grey', 3.3*width - i*height + center,-3.3*width/2 - i*height/2 + j*depth+center)
+        draw3polygon(verticesright,'grey',i*width - 3.3*height + center,-i*width/2 - 3.3*height/2 + j*depth+center)
+
+    }   
+    
+    for (var i = 26; i >= 0; i-=1){
+        
+        console.log(board,board & 1 )
+        if (board & 1 == 1)
+        {
+            var x = i%3
+            var y = Math.floor(i/3)%3
+            var z = Math.floor(i/9)%3
+            draw_tile(x*width - y*height + center,-x*width/2 - y*height/2 + z*depth+center,color)
+            board = board >> 1;
+        }
+    }
+}
+
+function draw_piece(board,color){
+        for (var i = 26; i >= 0; i-=1){
+            console.log(board,board & 1 )
+            if (board & 1 == 1){
+                var x = i%3
+                var y = Math.floor(i/3)%3
+                var z = Math.floor(i/9)%3
+                draw_tile(x*width - y*height + center,-x*width/2 - y*height/2 + z*depth+center,color)
+            }
+            board = board >> 1;   
+        }
+}
+
+function draw_TWO_piece(board_A,color_A, board_B, color_B)
+{
+    for (var i = 26; i >= 0; i-=1)
+    {
+        var x = i%3
+        var y = Math.floor(i/3)%3
+        var z = Math.floor(i/9)%3
+        if ((board_A & 1 == 1) && (board_B & 1 == 1)) 
+        {
+            draw_tile(x*width - y*height + center,-x*width/2 - y*height/2 + z*depth+center,'red')
+        }
+        else if (board_A & 1 == 1)
+        {
+            draw_tile(x*width - y*height + center,-x*width/2 - y*height/2 + z*depth+center,color_A)
+        }
+        else if (board_B & 1 == 1)
+        {
+            draw_tile(x*width - y*height + center,-x*width/2 - y*height/2 + z*depth+center,color_B)
+        }
+
+        board_A = board_A >> 1;
+        board_B = board_B >> 1;
+    }
+}
+
+// draw_board(4+8+16+32+64+1+2)
+
+// draw_piece(5000,'red')
+
+draw_board(0)
+draw_TWO_piece(1,'green',3,'blue')
+
+canvas.addEventListener('mousemove', function(event) {
+    // if (event.clientX - RECTLEFT<400 && event.clientY - RECTTOP<400)
+    //     {
+    //X = x*width - y*height + center
+    //Y = -x*width/2 - y*height/2 + z*depth+center
+
+    let X = event.clientX - center
+    let Y = event.clientY - center
+
+    let inv = 1/(width * (-height/2) - height * width/2)
+    let x = Math.floor(( X/(height/2) + Y/height)*inv) 
+    let y = 0// Math.floor(-X/width -Y/height/2)
+    console.log('x: ',x,' y: ',y)
+    draw_board(0)
+draw_TWO_piece(1,'green',3,'blue')
+    draw_tile(x*width - y*height + center,-x*width/2 - y*height/2 + 3*depth+center,'orenge')
+})
+
+
+    </script>
+</body>
+</html>
